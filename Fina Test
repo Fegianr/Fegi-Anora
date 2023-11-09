@@ -1,0 +1,82 @@
+1. a) API Request
+      url = 'https://berita-indo-api-next.vercel.app/api/cnn-news/teknologi'
+      response = requests.get(https://berita-indo-api-next.vercel.app/api/cnn-news/teknologi)
+      data = response.json()
+
+   b) Transformasi menjadi DataFrame
+      df = pd.DataFrame(data['data'])
+
+   c) Transformasi data kolom 'isoDate' menjadi tipe data datetime
+      df['isoDate'] = pd.to_datetime(df['isoDate'])
+
+2 a) Buat Table Dimensi
+     CREATE TABLE dim_user (
+        user_id INT PRIMARY KEY,
+        user_name VARCHAR(100),
+        country VARCHAR(50)
+     );
+
+     CREATE TABLE dim_post (
+        post_id INT PRIMARY KEY,
+        post_text VARCHAR(500),
+        post_date DATE,
+        user_id INT
+     );
+
+    CREATE TABLE dim_date (
+        date_id SERIAL PRIMARY KEY,
+        date_value DATE
+    );
+b) Mengisi Tabel Dimensi
+-- Isi dim_user
+INSERT INTO dim_user
+SELECT DISTINCT user_id, user_name, country
+FROM raw_users;
+
+-- Isi dim_post
+INSERT INTO dim_post
+SELECT DISTINCT post_id, post_text, post_date, user_id
+FROM raw_posts;
+
+-- Isi dim_date
+INSERT INTO dim_date (date_value)
+SELECT DISTINCT post_date FROM raw_posts;
+
+c) Buat Table Fakta
+CREATE TABLE fact_post_performance (
+    post_id INT,
+    date_id INT,
+    views INT,
+    likes INT
+);
+
+d) Isi Table Fakta
+INSERT INTO fact_post_performance (post_id, date_id, views, likes)
+SELECT rp.post_id, dd.date_id, COUNT(*), (SELECT COUNT(*) FROM raw_likes rl WHERE rl.post_id = rp.post_id)
+FROM raw_posts rp
+JOIN dim_date dd ON rp.post_date = dd.date_value
+LEFT JOIN raw_likes rl ON rp.post_id = rl.post_id
+GROUP BY rp.post_id, dd.date_id;
+
+e) Buat Table Fakta Harian
+CREATE TABLE fact_daily_posts (
+    user_id INT,
+    date_id INT,
+    num_posts INT
+);
+
+f) Isi Table Fakta Harian
+INSERT INTO fact_daily_posts (user_id, date_id, num_posts)
+SELECT user_id, date_id, COUNT(*)
+FROM raw_posts
+JOIN dim_date ON raw_posts.post_date = dim_date.date_value
+GROUP BY user_id, date_id;
+
+Izin kak Reza, sebelumnya saya pibadi meminta maaf apabila soal yang saya kerjakan tidak sesuai prosedur 
+karena keadaan saya sekarang pada saat mengerjakan Final Test ini sedang Mati Listrik, 
+jadi kendala utama saya kesulitan mengakses jaringan internet dan 
+yang kedua laptop saya tidak bisa digunakan jika tidak sambil di cas. 
+saya mengerjakan ini meminjam laptop saudara saat keadaan urgent dan tidak ada sama sekali aplikasi ngoding kak,
+mohon pengertiaanya, saya sudah konfirmasi dengan kak Valent dan beliau pun sedang mengajukan ke LD 
+dan sekali lagi saya ucapkan banyak permohonan maaf yang sebesar-besarnya.
+
